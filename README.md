@@ -1,3 +1,18 @@
+## Note
+
+This is a fork from https://github.com/Edubits/Zway-MQTT for extending the function of this app.
+*Please note that this app for Z-Way is in beta state and bugs and issues are quite likely to occur.
+*If you want to be sure take the original app while this is not finished.
+
+Extensions:
+- sensorMultilevel support (read from MQTT to Z-Way sensor)
+- support of Tasmota and Shelly switches
+ (use Z-Way dummy device, Code device or HTTP device for control)
+- small fixes
+
+To do:
+- json format support for MQTT server 
+
 # MQTT Z-Way HA module
 
 Publishes the status of devices to a MQTT topic and is able to set
