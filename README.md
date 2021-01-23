@@ -1,8 +1,8 @@
 ## Note
 
 This is a fork from https://github.com/Edubits/Zway-MQTT for extending the function of this app.
-*Please note that this app for Z-Way is in beta state and bugs and issues are quite likely to occur.
-*If you want to be sure take the original app while this is not finished.
+*Please note that this app for Z-Way is in beta state and bugs and issues are quite likely to occur.*
+*If you want to be sure take the original app while this is not finished.*
 
 Extensions:
 - sensorMultilevel support (read from MQTT to Z-Way sensor)
