@@ -1,15 +1,15 @@
-/*** MQTT Z-Way HA module ****************************************************
+/*** MQTT2 Z-Way HA module ****************************************************
 
-Version: 1.3
-(c) Robin Eggenkamp, 2016
+Version: 2.0.1
+(c) Robin Eggenkamp, 2016 / mod. by M.Pruefer 2021
 -----------------------------------------------------------------------------
-Author: Robin Eggenkamp <robin@edubits.nl>
+Author: Robin Eggenkamp <robin@edubits.nl> / mod. by M.Pruefer <contact@smarthome-work.com>
 Description:
    Publishes the status of devices to a MQTT topic and is able
    to set values based on subscribed topics
 
    MQTTClient based on https://github.com/goodfield/zway-mqtt
-
+   modified from: https://github.com/Edubits/Zway-MQTT
  *****************************************************************************/
 
 
@@ -17,21 +17,21 @@ Description:
 // --- Class definition, inheritance and setup
 // ----------------------------------------------------------------------------
 
-function MQTT (id, controller) {
-	MQTT.super_.call(this, id, controller);
+function MQTT2 (id, controller) {
+	MQTT2.super_.call(this, id, controller);
 }
 
-inherits(MQTT, BaseModule);
+inherits(MQTT2, BaseModule);
 
-_module = MQTT;
+_module = MQTT2;
 
 // ----------------------------------------------------------------------------
 // --- Module instance initialized
 // ----------------------------------------------------------------------------
 
-MQTT.prototype.init = function (config) {
+MQTT2.prototype.init = function (config) {
 	// Call superclass' init (this will process config argument and so on)
-	MQTT.super_.prototype.init.call(this, config);
+	MQTT2.super_.prototype.init.call(this, config);
 
 	var self = this;
 
@@ -57,7 +57,7 @@ MQTT.prototype.init = function (config) {
 	self.controller.devices.on("change:metrics:level", self.callbackToggle);
 };
 
-MQTT.prototype.stop = function () {
+MQTT2.prototype.stop = function () {
 	var self = this;
 
 	var event = self.config.ignore ? "change:metrics:level" : "modify:metrics:level";
@@ -75,14 +75,14 @@ MQTT.prototype.stop = function () {
 		self.reconnect_timer = null;
 	}
 
-	MQTT.super_.prototype.stop.call(this);
+	MQTT2.super_.prototype.stop.call(this);
 };
 
 // ----------------------------------------------------------------------------
 // --- Module methods
 // ----------------------------------------------------------------------------
 
-MQTT.prototype.setupMQTTClient = function () {
+MQTT2.prototype.setupMQTTClient = function () {
 	var self = this;
 
 	var mqttOptions = {
@@ -119,32 +119,31 @@ MQTT.prototype.setupMQTTClient = function () {
 
 		self.client.subscribe(self.createTopic("/#"), {}, function (topic, payload) {
 			var topic = topic.toString();
-
-			if (!topic.endsWith(self.config.topicPostfixStatus) && !topic.endsWith(self.config.topicPostfixSet))
-				return;
-
 			self.controller.devices.each(function (device) {
 				self.processPublicationsForDevice(device, function (device, publication) {
-					var deviceTopic = self.createTopic(publication.topic, device);
+					var deviceTopic = self.createTopic("/");
 
-					if (topic == deviceTopic + "/" + self.config.topicPostfixStatus) {
-						self.updateDevice(device);
+					if (topic == deviceTopic + "/" + publication.topicSet) {
+						if(device.get("metrics:level") != payload.toLowerCase()){
+							self.updateDevice(device);
+						}	
 					}
 
-					if (topic == deviceTopic + "/" + self.config.topicPostfixSet) {
+					if (topic == deviceTopic + "/" + publication.topicGet) {
 						var deviceType = device.get('deviceType');
-
-						if (deviceType.startsWith("sensor")) {
+						if (deviceType === "sensorMultilevel") {
+							device.set("metrics:level", payload);
+						}else if (deviceType.startsWith("sensor")) {
 							self.error("Can't perform action on sensor " + device.get("metrics:title"));
 							return;
-						}
-
-						if (deviceType === "switchMultilevel" && payload !== "on" && payload !== "off" && payload !== "stop") {
+						} else if (deviceType === "switchMultilevel" && payload !== "on" && payload !== "off" && payload !== "stop") {
 							device.performCommand("exact", {level: payload + "%"});
 						} else if (deviceType === "thermostat") {
 							device.performCommand("exact", {level: payload});
 						} else {
-							device.performCommand(payload);
+						  if(device.get("metrics:level") != payload.toLowerCase()){
+							device.performCommand(payload.toLowerCase());
+						  }	
 						}
 					}
 				});
@@ -156,7 +155,7 @@ MQTT.prototype.setupMQTTClient = function () {
 	});
 };
 
-MQTT.prototype.onDisconnect = function () {
+MQTT2.prototype.onDisconnect = function () {
 	var self = this;
 
 	// Reset connected flag
@@ -194,7 +193,7 @@ MQTT.prototype.onDisconnect = function () {
 	}, Math.min(self.reconnectCount * 1000, 60000));
 };
 
-MQTT.prototype.updateDevice = function (device) {
+MQTT2.prototype.updateDevice = function (device) {
 	var self = this;
 
 	var value = device.get("metrics:level");
@@ -213,9 +212,10 @@ MQTT.prototype.updateDevice = function (device) {
 	}
 
 	self.processPublicationsForDevice(device, function (device, publication) {
-		var topic = self.createTopic(publication.topic, device);
-
+	 if(publication.topicSet != undefined){
+		var topic = self.createTopic(publication.topicSet, device);
 		self.publish(topic, value, publication.retained);
+	 }	
 	});
 };
 
@@ -223,7 +223,7 @@ MQTT.prototype.updateDevice = function (device) {
  * The value of toggleButtons doesn't change, so we have to check all level changes.
  * For that reason these updates are never retained.
  */
-MQTT.prototype.updateToggleDevice = function (device) {
+MQTT2.prototype.updateToggleDevice = function (device) {
 	var self = this;
 
 	var value = device.get("metrics:level");
@@ -234,13 +234,12 @@ MQTT.prototype.updateToggleDevice = function (device) {
 	}
 
 	self.processPublicationsForDevice(device, function (device, publication) {
-		var topic = self.createTopic(publication.topic, device);
-
+		var topic = self.createTopic(publication.topicGet, device);
 		self.publish(topic, value, false);
 	});
 };
 
-MQTT.prototype.processPublicationsForDevice = function (device, callback) {
+MQTT2.prototype.processPublicationsForDevice = function (device, callback) {
 	var self = this;
 
 	if (! _.isFunction(callback)) {
@@ -264,23 +263,27 @@ MQTT.prototype.processPublicationsForDevice = function (device, callback) {
 	});
 };
 
-MQTT.prototype.publish = function (topic, value, retained) {
+MQTT2.prototype.publish = function (topic, value, retained) {
 	var self = this;
 
 	if (self.client && self.client.connected) {
 		var options = {};
 		options.retain = retained;
-
 		self.client.publish(topic, value.toString().trim(), options);
 	}
 };
 
-MQTT.prototype.createTopic = function (pattern, device) {
+MQTT2.prototype.createTopic = function (pattern, device) {
 	var self = this;
-
-	var topicParts = [].concat(self.config.topicPrefix.split("/"))
-		.concat(pattern.split("/"));
-
+	if (pattern == undefined) pattern=""; 
+	if( pattern.substring(0,2) == "//") {
+		pattern.replace("//","/");
+		topicParts = [].concat(pattern.split("/"));
+	}
+	else {
+		var topicParts = [].concat(self.config.topicPrefix.split("/"))  ;
+		if(pattern != "/") topicParts =	topicParts.concat(pattern.split("/"));
+	}
 	if (device != undefined) {
 		topicParts = topicParts.map(function (part) {
 			return part.replace("%roomName%", self.findRoom(device.get("location")).title.toCamelCase())
@@ -295,7 +298,7 @@ MQTT.prototype.createTopic = function (pattern, device) {
 	}).join("/");
 };
 
-MQTT.prototype.findRoom = function (roomId) {
+MQTT2.prototype.findRoom = function (roomId) {
 	var self = this;
 
 	var locations = self.controller.locations;

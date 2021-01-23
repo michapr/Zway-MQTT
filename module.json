@@ -1,5 +1,5 @@
 {
-	"author": "Robin Eggenkamp",
+	"author": "Robin Eggenkamp, M. Pruefer",
 	"category": "logging",
 	"defaults": {
 		"title": "__m_title__",
@@ -21,9 +21,9 @@
 	"homepage": "https://github.com/Edubits/Zway-MQTT",
 	"icon": "icon.png",
 	"maturity": "stable",
-	"moduleName": "MQTT",
+	"moduleName": "MQTT2",
 	"singleton": false,
-	"version": "1.4.1",
+	"version": "2.0.1",
 	"repository": {
 		"source": "https://github.com/Edubits/Zway-MQTT",
 		"type": "git"
@@ -59,17 +59,8 @@
 			},
 			"topicPrefix": {
 				"label": "__topic_prefix_label__",
+				"helper": "__topic_prefix_helper__",
 				"order": 7
-			},
-			"topicPostfixStatus": {
-				"label": "__topic_postfix_status_label__",
-				"helper": "__topic_postfix_status_helper__",
-				"order": 8
-			},
-			"topicPostfixSet": {
-				"label": "__topic_postfix_set_label__",
-				"helper": "__topic_postfix_set_helper__",
-				"order": 9
 			},
 			"ignore": {
 				"label": "__ignore_label__",
@@ -109,22 +100,26 @@
 							"field" : "optionLabels",
 							"noneLabel" : "__device_id_choose__",
 							"optionLabels" : "namespaces:devices_switchBinary:deviceName,namespaces:devices_switchMultilevel:deviceName,namespaces:devices_switchRGBW:deviceName,namespaces:devices_sensorBinary:deviceName,namespaces:devices_sensorMultilevel:deviceName",
-							"order" : 2,
+							"order" : 3,
 							"removeDefaultNone" : false,
 							"type" : "select",
 							"dependencies" : {
 								"type" : "single"
 							}
 						},
-
-						"topic": {
-							"label": "__topic_label__",
+						"topicGet": {
+							"label": "__topic_get_label__",
 							"helper": "__topic_helper__",
-							"order": 3
+							"order": 4
+						},
+						"topicSet": {
+							"label": "__topic_set_label__",
+							"helper": "__topic_set_helper__",
+							"order": 5
 						},
 						"retained": {
 							"label": "__retained_label__",
-							"order": 4
+							"order": 6
 						}
 					}
 				}
@@ -160,14 +155,6 @@
 				"required": false
 			},
 			"topicPrefix": {
-				"type": "string",
-				"required": true
-			},
-			"topicPostfixStatus": {
-				"type": "string",
-				"required": true
-			},
-			"topicPostfixSet": {
 				"type": "string",
 				"required": true
 			},
@@ -209,9 +196,14 @@
 							"dependencies": "type"
 						},
 
-						"topic": {
+						"topicGet": {
 							"type": "string",
 							"required": true,
+							"dependencies": "type"
+						},
+						"topicSet": {
+							"type": "string",
+							"required": false,
 							"dependencies": "type"
 						},
 						"retained": {
